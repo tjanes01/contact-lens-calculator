@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Contact Lens Cost Calculator</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Papa Parse for CSV reading -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <div class="header-logo">
+      <i class="fa-solid fa-eye"></i>
+      <span>Contact Lens Calculator</span>
+    </div>
+    <div class="header-sub">Staff Reference Tool</div>
+  </div>
+</header>
+
+<!-- MAIN CONTAINER -->
+<main class="container">
+
+  <!-- UPLOAD BANNER -->
+  <div class="upload-banner" id="uploadBanner">
+    <i class="fa-solid fa-file-csv"></i>
+    <span>Upload a new price list CSV to update data</span>
+    <label class="btn btn-outline btn-sm" for="csvUpload">
+      <i class="fa-solid fa-upload"></i> Upload CSV
+    </label>
+    <input type="file" id="csvUpload" accept=".csv" style="display:none"/>
+    <span id="uploadStatus" class="upload-status"></span>
+  </div>
+
+  <!-- SEARCH & FILTER CARD -->
+  <div class="card">
+    <div class="card-header">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <h2>Find a Lens</h2>
+    </div>
+    <div class="card-body">
+      <div class="filter-grid">
+
+        <div class="form-group">
+          <label for="brandFilter">Brand</label>
+          <select id="brandFilter">
+            <option value="">All Brands</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="lensSearch">Lens Name</label>
+          <input type="text" id="lensSearch" placeholder="Type to search lens..." autocomplete="off"/>
+          <div id="searchDropdown" class="search-dropdown hidden"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="modalityFilter">Modality / Pack Size</label>
+          <select id="modalityFilter">
+            <option value="">All Modalities</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- LENS RESULT ROW -->
+      <div id="lensResult" class="lens-result hidden">
+        <div class="lens-badge">
+          <span id="resultBrand" class="badge badge-brand"></span>
+          <span id="resultModality" class="badge badge-modality"></span>
+          <span id="resultBC" class="badge badge-info"><i class="fa-solid fa-circle-info"></i> BC: <span id="bcVal"></span></span>
+          <span id="resultDiam" class="badge badge-info">Diam: <span id="diamVal"></span></span>
+          <span id="resultLPB" class="badge badge-info">Lenses/Box: <span id="lpbVal"></span></span>
+        </div>
+        <h3 id="resultLensName" class="lens-name-heading"></h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALCULATOR SECTION (visible once lens selected) -->
+  <div id="calculatorSection" class="hidden">
+
+    <!-- PATIENT OPTIONS CARD -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fa-solid fa-sliders"></i>
+        <h2>Patient Options</h2>
+      </div>
+      <div class="card-body">
+        <div class="options-grid">
+
+          <div class="form-group">
+            <label>Eyes</label>
+            <div class="btn-toggle-group" id="eyeToggle">
+              <button class="btn-toggle active" data-value="2">Both Eyes</button>
+              <button class="btn-toggle" data-value="1">One Eye</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Patient Type</label>
+            <div class="btn-toggle-group" id="patientToggle">
+              <button class="btn-toggle active" data-value="new">New</button>
+              <button class="btn-toggle" data-value="existing">Existing</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="boxQty">Number of Boxes <span class="label-hint">(per eye)</span></label>
+            <input type="number" id="boxQty" min="1" max="24" value="4" />
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS CARD -->
+    <div class="card results-card">
+      <div class="card-header">
+        <i class="fa-solid fa-calculator"></i>
+        <h2>Price Breakdown</h2>
+      </div>
+      <div class="card-body">
+
+        <!-- SUMMARY TILES -->
+        <div class="tiles-grid" id="tilesGrid">
+
+          <div class="tile tile-our">
+            <div class="tile-label"><i class="fa-solid fa-store"></i> Our Price</div>
+            <div class="tile-price" id="tileOurGross">—</div>
+            <div class="tile-sub">Before rebate</div>
+          </div>
+
+          <div class="tile tile-rebate">
+            <div class="tile-label"><i class="fa-solid fa-tag"></i> Rebate</div>
+            <div class="tile-price" id="tileRebate">—</div>
+            <div class="tile-sub" id="tileRebateSub">Annual supply rebate</div>
+          </div>
+
+          <div class="tile tile-net highlight-tile">
+            <div class="tile-label"><i class="fa-solid fa-circle-dollar-to-slot"></i> Our Net Price</div>
+            <div class="tile-price" id="tileOurNet">—</div>
+            <div class="tile-sub">After rebate applied</div>
+          </div>
+
+          <div class="tile tile-comp">
+            <div class="tile-label"><i class="fa-solid fa-building-columns"></i> 1-800 Competitor</div>
+            <div class="tile-price" id="tileCompNet">—</div>
+            <div class="tile-sub">After competitor rebate</div>
+          </div>
+
+        </div>
+
+        <!-- DETAIL TABLE -->
+        <div class="detail-table-wrapper">
+          <table class="detail-table" id="detailTable">
+            <thead>
+              <tr>
+                <th>Detail</th>
+                <th class="col-ours">Ours</th>
+                <th class="col-comp">1-800 Contacts</th>
+              </tr>
+            </thead>
+            <tbody id="detailBody"></tbody>
+          </table>
+        </div>
+
+        <!-- SAVINGS CALLOUT -->
+        <div id="savingsCallout" class="savings-callout hidden"></div>
+
+        <!-- REBATE NOTE -->
+        <div id="rebateNote" class="rebate-note hidden">
+          <i class="fa-solid fa-circle-info"></i>
+          <span id="rebateNoteText"></span>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end calculatorSection -->
+
+  <!-- FULL PRICE TABLE -->
+  <div class="card">
+    <div class="card-header collapsible-header" id="tableToggleHeader">
+      <i class="fa-solid fa-table"></i>
+      <h2>Full Price List</h2>
+      <span class="collapse-icon"><i class="fa-solid fa-chevron-down" id="tableChevron"></i></span>
+    </div>
+    <div id="fullTableWrapper" class="hidden">
+      <div class="table-controls">
+        <input type="text" id="tableSearch" placeholder="&#xf002;  Search all lenses..." class="table-search"/>
+        <select id="tableBrandFilter" class="table-brand-filter">
+          <option value="">All Brands</option>
+        </select>
+      </div>
+      <div class="table-scroll">
+        <table class="price-table" id="priceTable">
+          <thead>
+            <tr>
+              <th>Brand</th>
+              <th>Lens Name</th>
+              <th>Modality</th>
+              <th>Lenses/Box</th>
+              <th>BC</th>
+              <th>Diam</th>
+              <th>Retail/Box</th>
+              <th>Rebate (New)</th>
+              <th>Rebate (Exist.)</th>
+              <th>Comp/Box</th>
+              <th>Comp Rebate (New)</th>
+              <th>Comp Rebate (Exist.)</th>
+            </tr>
+          </thead>
+          <tbody id="priceTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <span>Internal Staff Tool &bull; Data updates via CSV upload &bull; <i class="fa-solid fa-eye"></i></span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
