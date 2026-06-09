@@ -1,4 +1,4 @@
-/* Test Version - Contact Lens Calculator */
+/* Contact Lens Calculator */
 
 var allLenses = [];
 var selectedLens = null;
@@ -231,20 +231,27 @@ function updateSearchDropdown() {
     dropdown.classList.remove('hidden');
     return;
   }
-  var html = '';
+
+  // Build dropdown items using mousedown instead of click
+  // This fires BEFORE the input loses focus, fixing the blur/click race condition
+  dropdown.innerHTML = '';
   for (var i = 0; i < uniqueNames.length; i++) {
-    html += '<div class="dd-item" data-name="' + uniqueNames[i] + '">' + uniqueNames[i] + '</div>';
+    (function(lensName) {
+      var div = document.createElement('div');
+      div.className = 'dd-item';
+      div.dataset.name = lensName;
+      div.textContent = lensName;
+      div.addEventListener('mousedown', function(e) {
+        // preventDefault stops the input from losing focus before we handle the click
+        e.preventDefault();
+        document.getElementById('lensSearch').value = lensName;
+        dropdown.classList.add('hidden');
+        selectLensByName(lensName);
+      });
+      dropdown.appendChild(div);
+    })(uniqueNames[i]);
   }
-  dropdown.innerHTML = html;
   dropdown.classList.remove('hidden');
-  var items = dropdown.querySelectorAll('.dd-item[data-name]');
-  for (var i = 0; i < items.length; i++) {
-    items[i].addEventListener('click', function() {
-      document.getElementById('lensSearch').value = this.dataset.name;
-      dropdown.classList.add('hidden');
-      selectLensByName(this.dataset.name);
-    });
-  }
 }
 
 function selectLensByName(name) {
@@ -270,12 +277,12 @@ function selectLensByName(name) {
 
 function setSelectedLens(lens) {
   selectedLens = lens;
-  document.getElementById('resultBrand').textContent    = lens[COL.brand]              || '';
+  document.getElementById('resultBrand').textContent    = lens[COL.brand]    || '';
   document.getElementById('resultModality').textContent = friendlyModality(lens[COL.modality]);
-  document.getElementById('bcVal').textContent          = lens[COL.bc]                 || 'N/A';
-  document.getElementById('diamVal').textContent        = lens[COL.diam]               || 'N/A';
-  document.getElementById('lpbVal').textContent         = lens[COL.lpb]                || 'N/A';
-  document.getElementById('resultLensName').textContent = lens[COL.lens]               || '';
+  document.getElementById('bcVal').textContent          = lens[COL.bc]       || 'N/A';
+  document.getElementById('diamVal').textContent        = lens[COL.diam]     || 'N/A';
+  document.getElementById('lpbVal').textContent         = lens[COL.lpb]      || 'N/A';
+  document.getElementById('resultLensName').textContent = lens[COL.lens]     || '';
   document.getElementById('lensResult').classList.remove('hidden');
   document.getElementById('calculatorSection').classList.remove('hidden');
   calculate();
@@ -289,14 +296,18 @@ function calculate() {
   var boxes        = parseInt(document.getElementById('boxQty').value) || 1;
   var retailPerBox = num(selectedLens[COL.retail]);
   var compPerBox   = num(selectedLens[COL.compBox]);
-  var rebateAmt    = patientType === 'new' ? num(selectedLens[COL.rebateNew])     : num(selectedLens[COL.rebateExist]);
-  var compRebAmt   = patientType === 'new' ? num(selectedLens[COL.compRebateNew]) : num(selectedLens[COL.compRebateEx]);
+  var rebateAmt    = patientType === 'new'
+                       ? num(selectedLens[COL.rebateNew])
+                       : num(selectedLens[COL.rebateExist]);
+  var compRebAmt   = patientType === 'new'
+                       ? num(selectedLens[COL.compRebateNew])
+                       : num(selectedLens[COL.compRebateEx]);
   var ourGross     = isNaN(retailPerBox) ? NaN : retailPerBox * boxes * eyes;
-  var rebate       = isNaN(rebateAmt)   ? 0   : rebateAmt;
-  var ourNet       = isNaN(ourGross)    ? NaN : Math.max(0, ourGross - rebate);
-  var compGross    = isNaN(compPerBox)  ? NaN : compPerBox * boxes * eyes;
-  var compRebate   = isNaN(compRebAmt) ? 0   : compRebAmt;
-  var compNet      = isNaN(compGross)   ? NaN : Math.max(0, compGross - compRebate);
+  var rebate       = isNaN(rebateAmt)    ? 0   : rebateAmt;
+  var ourNet       = isNaN(ourGross)     ? NaN : Math.max(0, ourGross - rebate);
+  var compGross    = isNaN(compPerBox)   ? NaN : compPerBox  * boxes * eyes;
+  var compRebate   = isNaN(compRebAmt)   ? 0   : compRebAmt;
+  var compNet      = isNaN(compGross)    ? NaN : Math.max(0, compGross - compRebate);
 
   document.getElementById('tileOurGross').textContent = fmt(ourGross);
   document.getElementById('tileRebate').textContent   = rebate > 0 ? '-' + fmt(rebate) : 'No Rebate';
@@ -307,22 +318,23 @@ function calculate() {
     : 'No rebate available';
 
   var rows = [
-    ['Price Per Box',           fmt(retailPerBox),  fmt(compPerBox)],
-    ['Boxes (per eye)',         String(boxes),       String(boxes)],
-    ['Eyes',                    String(eyes),        String(eyes)],
-    ['Gross Total',             fmt(ourGross),       fmt(compGross)],
-    ['Rebate Applied',          rebate > 0    ? '-' + fmt(rebate)    : '-',
-                                compRebate > 0 ? '-' + fmt(compRebate) : '-'],
-    ['<strong>Net Total</strong>',
-      '<strong>' + fmt(ourNet)  + '</strong>',
-      '<strong>' + fmt(compNet) + '</strong>']
+    ['Price Per Box',             fmt(retailPerBox),               fmt(compPerBox)],
+    ['Boxes (per eye)',           String(boxes),                   String(boxes)],
+    ['Eyes',                      String(eyes),                    String(eyes)],
+    ['Gross Total',               fmt(ourGross),                   fmt(compGross)],
+    ['Rebate Applied',            rebate     > 0 ? '-' + fmt(rebate)     : '-',
+                                  compRebate > 0 ? '-' + fmt(compRebate) : '-'],
+    ['<strong>Net Total</strong>','<strong>' + fmt(ourNet)  + '</strong>',
+                                  '<strong>' + fmt(compNet) + '</strong>']
   ];
 
   var tbodyHtml = '';
   for (var i = 0; i < rows.length; i++) {
-    tbodyHtml += '<tr><td>' + rows[i]<a href="" class="citation-link" target="_blank" style="vertical-align: super; font-size: 0.8em; margin-left: 3px;">[0]</a> + '</td>';
+    tbodyHtml += '<tr>';
+    tbodyHtml += '<td>'               + rows[i]<a href="" class="citation-link" target="_blank" style="vertical-align: super; font-size: 0.8em; margin-left: 3px;">[0]</a> + '</td>';
     tbodyHtml += '<td class="col-ours">' + rows[i]<a href="" class="citation-link" target="_blank" style="vertical-align: super; font-size: 0.8em; margin-left: 3px;">[1]</a> + '</td>';
-    tbodyHtml += '<td class="col-comp">'  + rows[i]<a href="" class="citation-link" target="_blank" style="vertical-align: super; font-size: 0.8em; margin-left: 3px;">[2]</a> + '</td></tr>';
+    tbodyHtml += '<td class="col-comp">' + rows[i]<a href="" class="citation-link" target="_blank" style="vertical-align: super; font-size: 0.8em; margin-left: 3px;">[2]</a> + '</td>';
+    tbodyHtml += '</tr>';
   }
   document.getElementById('detailBody').innerHTML = tbodyHtml;
 
@@ -344,11 +356,12 @@ function calculate() {
     callout.classList.add('hidden');
   }
 
-  var rebateNote = document.getElementById('rebateNote');
+  var rebateNote     = document.getElementById('rebateNote');
   var rebateNoteText = document.getElementById('rebateNoteText');
   if (rebate > 0) {
     rebateNote.classList.remove('hidden');
-    rebateNoteText.textContent = 'Rebate of ' + fmt(rebate) + ' applies to an annual supply for a ' + patientType + ' patient. Patient submits rebate form after purchase.';
+    rebateNoteText.textContent = 'Rebate of ' + fmt(rebate) + ' applies to an annual supply for a '
+      + patientType + ' patient. Patient submits rebate form after purchase.';
   } else {
     rebateNote.classList.add('hidden');
   }
@@ -362,7 +375,11 @@ function filterFullTable() {
     var l = allLenses[i];
     if (brand && l[COL.brand] !== brand) { continue; }
     if (search) {
-      var haystack = ((l[COL.lens] || '') + ' ' + (l[COL.brand] || '') + ' ' + (l[COL.modality] || '')).toLowerCase();
+      var haystack = (
+        (l[COL.lens]      || '') + ' ' +
+        (l[COL.brand]     || '') + ' ' +
+        (l[COL.modality]  || '')
+      ).toLowerCase();
       if (haystack.indexOf(search) === -1) { continue; }
     }
     filtered.push(l);
@@ -413,6 +430,7 @@ function initEvents() {
     }
   });
 
+  // Hide dropdown when clicking outside
   document.addEventListener('click', function(e) {
     var search   = document.getElementById('lensSearch');
     var dropdown = document.getElementById('searchDropdown');
