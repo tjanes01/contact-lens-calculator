@@ -231,9 +231,6 @@ function updateSearchDropdown() {
     dropdown.classList.remove('hidden');
     return;
   }
-
-  // Build dropdown items using mousedown instead of click
-  // This fires BEFORE the input loses focus, fixing the blur/click race condition
   dropdown.innerHTML = '';
   for (var i = 0; i < uniqueNames.length; i++) {
     (function(lensName) {
@@ -242,7 +239,6 @@ function updateSearchDropdown() {
       div.dataset.name = lensName;
       div.textContent = lensName;
       div.addEventListener('mousedown', function(e) {
-        // preventDefault stops the input from losing focus before we handle the click
         e.preventDefault();
         document.getElementById('lensSearch').value = lensName;
         dropdown.classList.add('hidden');
@@ -318,20 +314,20 @@ function calculate() {
     : 'No rebate available';
 
   var rows = [
-    ['Price Per Box',             fmt(retailPerBox),               fmt(compPerBox)],
-    ['Boxes (per eye)',           String(boxes),                   String(boxes)],
-    ['Eyes',                      String(eyes),                    String(eyes)],
-    ['Gross Total',               fmt(ourGross),                   fmt(compGross)],
-    ['Rebate Applied',            rebate     > 0 ? '-' + fmt(rebate)     : '-',
-                                  compRebate > 0 ? '-' + fmt(compRebate) : '-'],
-    ['<strong>Net Total</strong>','<strong>' + fmt(ourNet)  + '</strong>',
-                                  '<strong>' + fmt(compNet) + '</strong>']
+    ['Price Per Box',              fmt(retailPerBox),               fmt(compPerBox)],
+    ['Boxes (per eye)',            String(boxes),                   String(boxes)],
+    ['Eyes',                       String(eyes),                    String(eyes)],
+    ['Gross Total',                fmt(ourGross),                   fmt(compGross)],
+    ['Rebate Applied',             rebate     > 0 ? '-' + fmt(rebate)     : '-',
+                                   compRebate > 0 ? '-' + fmt(compRebate) : '-'],
+    ['<strong>Net Total</strong>', '<strong>' + fmt(ourNet)  + '</strong>',
+                                   '<strong>' + fmt(compNet) + '</strong>']
   ];
 
   var tbodyHtml = '';
   for (var i = 0; i < rows.length; i++) {
     tbodyHtml += '<tr>';
-    tbodyHtml += '<td>'               + rows[i]<a href="" class="citation-link" target="_blank" style="vertical-align: super; font-size: 0.8em; margin-left: 3px;">[0]</a> + '</td>';
+    tbodyHtml += '<td>'                  + rows[i]<a href="" class="citation-link" target="_blank" style="vertical-align: super; font-size: 0.8em; margin-left: 3px;">[0]</a> + '</td>';
     tbodyHtml += '<td class="col-ours">' + rows[i]<a href="" class="citation-link" target="_blank" style="vertical-align: super; font-size: 0.8em; margin-left: 3px;">[1]</a> + '</td>';
     tbodyHtml += '<td class="col-comp">' + rows[i]<a href="" class="citation-link" target="_blank" style="vertical-align: super; font-size: 0.8em; margin-left: 3px;">[2]</a> + '</td>';
     tbodyHtml += '</tr>';
@@ -376,9 +372,9 @@ function filterFullTable() {
     if (brand && l[COL.brand] !== brand) { continue; }
     if (search) {
       var haystack = (
-        (l[COL.lens]      || '') + ' ' +
-        (l[COL.brand]     || '') + ' ' +
-        (l[COL.modality]  || '')
+        (l[COL.lens]     || '') + ' ' +
+        (l[COL.brand]    || '') + ' ' +
+        (l[COL.modality] || '')
       ).toLowerCase();
       if (haystack.indexOf(search) === -1) { continue; }
     }
@@ -430,7 +426,6 @@ function initEvents() {
     }
   });
 
-  // Hide dropdown when clicking outside
   document.addEventListener('click', function(e) {
     var search   = document.getElementById('lensSearch');
     var dropdown = document.getElementById('searchDropdown');
